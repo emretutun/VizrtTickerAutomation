@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/01_Services/">
+    <Project Path="TickerService/TickerService.csproj" Id="72c4f983-f42b-4c20-83a5-0c9293f05d26" />
+  </Folder>
+  <Folder Name="/02_UI/">
+    <Project Path="TickerUI/TickerUI.csproj" Id="50e2f7e4-10fc-409e-86c3-1f25a9630649" />
+  </Folder>
+  <Folder Name="/03_Common/">
+    <Project Path="Common/Common.csproj" Id="7f073c30-9b93-423c-833e-b174948d561d" />
+  </Folder>
+</Solution>
