@@ -1,7 +1,8 @@
-﻿using System;
+﻿using Common;
+using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using Common;
 
 namespace TickerService
 {
@@ -13,9 +14,11 @@ namespace TickerService
         private VizEngine _vizEngine; // Yeni eklenen motor bağlantımız
 
         private bool _haberBandiYayinda = false;
-
+        [DllImport("kernel32.dll")]
+        private static extern bool AllocConsole();
         public Form1()
         {
+            AllocConsole();
             InitializeComponent();
             this.Load += Form1_Load;
             this.FormClosing += Form1_FormClosing;
@@ -23,6 +26,7 @@ namespace TickerService
 
         private void Form1_Load(object sender, EventArgs e)
         {
+
             // 1. Web Sunucusunu Başlat
             _webServer = new SimpleWebServer("http://+:8090/");
             _webServer.Start();
@@ -50,7 +54,8 @@ namespace TickerService
             if (_haberBandiYayinda)
             {
                 this.Invoke((MethodInvoker)delegate {
-                    HaberBandiVer();
+                    // Loop (Döngü) olduğu için true gönderiyoruz. IN animasyonu tetiklenmeyecek.
+                    HaberBandiVer(true);
                 });
             }
         }
@@ -66,7 +71,7 @@ namespace TickerService
                 {
                     case "Haber Ticker Ver":
                         _haberBandiYayinda = true;
-                        HaberBandiVer();
+                        HaberBandiVer(false); // Butona basıldığı (ilk giriş) için false
                         break;
 
                     case "Haber Ticker Al":
@@ -77,25 +82,32 @@ namespace TickerService
             });
         }
 
-        private void HaberBandiVer()
+        private void HaberBandiVer(bool isLoop = false)
         {
-            List<string> haberler = DataHelper.GetHaberler();
+            // 3 Haber, 10 Skor kuralını işletiyoruz
+            List<TickerItem> veriler = DataHelper.GetMixedTickerData(3, 10);
 
-            if (haberler.Count == 0)
+            if (veriler.Count == 0)
             {
-                Console.WriteLine("Gönderilecek haber bulunamadı!");
+                Console.WriteLine("Gönderilecek veri bulunamadı!");
                 return;
             }
 
             // Ticker verisini bas
             _hbTicker.Clear();
-            _hbTicker.SendToTicker(haberler.ToArray());
+            _hbTicker.SendToTicker(veriler);
 
-            // Animasyonları tetikle
-            _vizEngine.Play("HABER_BASLIK_IN");
-            _vizEngine.Play("TICKER_IN");
-
-            Console.WriteLine("Haberler Vizrt Ticker'a gönderildi ve animasyonlar tetiklendi.");
+            // Eğer bu bir döngü (loop) değilse, yani butona yeni basıldıysa animasyonları oynat
+            if (!isLoop)
+            {
+                _vizEngine.Play("HABER_BASLIK_IN");
+                _vizEngine.Play("TICKER_IN");
+                Console.WriteLine($"{veriler.Count} adet karma veri Vizrt Ticker'a gönderildi ve animasyonlar tetiklendi.");
+            }
+            else
+            {
+                Console.WriteLine("Veriler bitti, animasyonsuz olarak yeni tura (loop) geçildi.");
+            }
         }
 
         private void HaberBandiAl()
@@ -103,7 +115,7 @@ namespace TickerService
             _hbTicker.Clear();
 
             // Bandı ekrandan çıkar
-            _vizEngine.Play("TICKER_OUT");
+            //_vizEngine.Play("TICKER_OUT");
 
             Console.WriteLine("Haber bandı yayından alındı.");
         }

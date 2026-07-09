@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -117,11 +118,54 @@ namespace Common
                       .Replace("&", "&amp;");
         }
 
-        public int SendToTicker(string[] lines)
+        public int SendToTicker(List<TickerItem> items)
         {
             int ret = 0;
-            foreach (string text in lines)
-                ret = SendToTicker(ConvertStupidEncoding(text));
+            foreach (var item in items)
+            {
+                groupNameCounter++;
+                string groupName = groupNameCounter.ToString();
+                if (groupNameCounter > 100) groupNameCounter = 0;
+
+                tickerControl.DeleteGroup(groupName);
+                string xml = $"<group name=\"{groupName}\">";
+
+                if (item.Type == TickerDataType.Haber)
+                {
+                    // Haber ise standart haber XML'i oluştur
+                    xml += ElementXML(groupName, 1, "haber_ticker_text", ConvertStupidEncoding(item.Metin1));
+                    xml += ElementXML(groupName, 2, "sep_haber_htspor");
+                }
+                else if (item.Type == TickerDataType.Skor)
+                {
+                    // Skor ise skor_group tasarımına uygun XML oluştur
+                    string evSahibi = ConvertStupidEncoding(item.Metin1);
+                    string deplasman = ConvertStupidEncoding(item.Metin2);
+                    string skorText = ConvertStupidEncoding(item.Skor);
+
+                    string values = $"<value label=\"takim_ev\" attribute=\"text\">{evSahibi}</value>" +
+                                    $"<value label=\"takim_deplasman\" attribute=\"text\">{deplasman}</value>";
+
+                    if (item.CanliMi)
+                    {
+                        values += $"<value label=\"skor_canli\" attribute=\"text\">{skorText}</value>" +
+                                  $"<value label=\"skor_mac_sonu\" attribute=\"text\"> </value>";
+                    }
+                    else
+                    {
+                        values += $"<value label=\"skor_mac_sonu\" attribute=\"text\">{skorText}</value>" +
+                                  $"<value label=\"skor_canli\" attribute=\"text\"> </value>";
+                    }
+
+                    xml += $"<element key=\"1\"><design>skor_group</design><ttl>{ttl}</ttl>{values}</element>";
+                    xml += ElementXML(groupName, 2, "sep_skor_htspor"); // Skor için ayırıcı
+                }
+
+                xml += "</group>";
+                tickerControl.AddGroupAfterGroup(previousGroup, xml);
+                previousGroup = groupName;
+                ret = groupNameCounter;
+            }
             return ret;
         }
 
